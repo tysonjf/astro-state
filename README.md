@@ -1,47 +1,206 @@
-# Astro Starter Kit: Minimal
+````markdown
+# Astro State
 
-```sh
-npm create astro@latest -- --template minimal
+Astro State is a TypeScript utility for managing application state in Astro projects. It provides subscription capabilities, middleware support, and optional local storage backup.
+
+## Features
+
+- 🚀 Designed for Astro projects
+- 🔄 State management with getter and setter methods
+- 📡 Subscription system for state changes
+- 🔗 Middleware support for intercepting and modifying state updates
+- 💾 Optional local storage backup with stale time checks
+- 🔒 TypeScript generics for type-safe state handling
+
+## Installation
+
+Since this package is only published on GitHub, you can install it directly from the repository:
+
+```bash
+pnpm add github:tysonjf/astro-state
+
+npm install github:tysonjf/astro-state
+```
+````
+
+## Usage
+
+### Importing the State class
+
+```typescript
+import { State } from "astro-state";
+
+const initialState = { count: 0 };
+const state = new State(initialState, {
+  autoUpdate: true,
+  localBackup: true,
+  localkey: "myAstroState",
+  // 5 * 60 * 1000 = 5 minutes
+  staleTime: 5 * 60 * 1000,
+});
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+### Subscribing to state changes
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+```typescript
+const countElement = document.getElementById("count");
 
-## 🚀 Project Structure
+state.subscribe((newState, prevState, initialState) => {
+  // Update the UI
+  countElement.textContent = newState.count.toString();
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+  console.log("State updated:", newState);
+});
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+### Updating state
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```typescript
+// valid
+state.set((prevState) => ({ count: prevState.count + 1 }));
+state.set({ count: 10 });
 
-Any static assets, like images, can be placed in the `public/` directory.
+// invalid
+state.set((prevState) => ({ count: prevState.count++ }));
+```
 
-## 🧞 Commands
+### Adding middleware
 
-All commands are run from the root of the project, from a terminal:
+```typescript
+state.addMiddleware((newState, prevState, initialState) => {
+  // Modify or validate state here
+  if (newState.count < 0) {
+    return { count: 0 };
+  }
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+  if (newState.count > 10) {
+    return initialState;
+  }
 
-## 👀 Want to learn more?
+  return newState;
+});
+```
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### Local storage operations
+
+```typescript
+state.getLocal(); // Load state from local storage
+state.resetLocal(); // Reset state to initial local storage value
+state.clearLocal(); // Clear state from local storage
+```
+
+## API Reference
+
+### `constructor(state: TState, options?: TConstructorOptions<TState>)`
+
+Creates a new State instance.
+
+### `subscribe(subscriber: TSubscriber<TState>, options?: TSubscriberOptions): boolean`
+
+Adds a subscriber to the state changes.
+
+### `unSubscribe(subscriber: TSubscriber<TState>): boolean`
+
+Removes a subscriber.
+
+### `addMiddleware(middleware: TMiddleware<TState>): void`
+
+Adds a middleware function to intercept state updates.
+
+### `get(): TState`
+
+Returns the current state.
+
+### `set(setter: TSetter<TState>): Promise<[TState, TState]>`
+
+Updates the state and returns a promise with the new and previous states.
+
+### `setLocal(): void`
+
+Saves the current state to local storage.
+
+### `getLocal(): void`
+
+Loads the state from local storage.
+
+### `resetLocal(): void`
+
+Resets the state to the initial value stored in local storage.
+
+### `clearLocal(): void`
+
+Removes the state from local storage.
+
+## Types
+
+```typescript
+type TSubscriber<T> = (newState: T, prevState: T, initialState: T) => void;
+type TSetter<T> = T | TSetterFunc<T>;
+type TSetterFunc<T> = (prev: T, initialState: T) => T;
+type TMiddleware<T> = (
+  newState: T,
+  prevState: T,
+  initialState: T,
+) => T | Promise<T>;
+
+type TConstructorOptions<TState> = {
+  callback?: TSubscriber<TState>;
+  autoUpdate?: boolean;
+  localBackup?: boolean;
+  localkey?: string;
+  staleTime?: number;
+};
+```
+
+## Development
+
+To start the development server:
+
+```bash
+npm run dev
+```
+
+To build the project:
+
+```bash
+npm run build
+```
+
+To preview the build:
+
+```bash
+npm run preview
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Repository
+
+[https://github.com/tysonjf/astro-state](https://github.com/tysonjf/astro-state)
+
+## Version
+
+1.0.0
+
+## Dependencies
+
+- @astrojs/check: ^0.8.1
+- astro: ^4.11.5
+- lodash: ^4.17.21
+- typescript: ^5.5.3
+
+## Dev Dependencies
+
+- @types/lodash: ^4.17.6
+
+```
+
+This README now:
+1. Uses "State" instead of "StateFactory" in the examples.
+2. Shows how to import the `State` class from the package.
+3. Provides instructions for installing the package directly from GitHub instead of npm.
+
+Is there anything else you'd like me to adjust in this README?
+```
